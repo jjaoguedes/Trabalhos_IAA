@@ -27,14 +27,16 @@ def especificidade(tn, fp):
 def f1__score(precisao, recall):
     return 2*((precisao*recall)/(precisao+recall))
 
+def taxa_de_erro(precisao, recall):
+    return 2*((precisao*recall)/(precisao+recall))
+
 #Função para realizar validação cruzada
-def validação_cruzada(model, X, y, n_dobras):
+def validacao_cruzada(model, X, y, n_dobras):
     scores_accuracy = []
-    scores_sensibility = []
-    scores_especifity = []
+    scores_sensitivity = []
+    scores_specificity = []
     scores_precision = []
-    scores_
-    mse_scores = []
+    scores_f1_score = []
     #Dividindo o dataset em dobras
     kf = KFold(n_splits=n_dobras, shuffle=True)
     for train_idx, test_idx in kf.split(X):
@@ -42,7 +44,7 @@ def validação_cruzada(model, X, y, n_dobras):
         y_train, y_test = y[train_idx], y[test_idx]
 
         #Treinando o modelo na dobra atual
-        history = model.fit(X_train, y_train, epochs=10, validation_split=0.2)
+        history.append(model.fit(X_train, y_train, epochs=10, validation_split=0.2))
 
         #Predizendo as classes
         predictions = model.predict(X_test)
@@ -50,10 +52,11 @@ def validação_cruzada(model, X, y, n_dobras):
         y_pred = np.argmax(predictions, axis=1)
         y_test1 = np.argmax(y_test, axis=1)
 
-        #Avaliando o modelo na dobra atual
-        #score = modelo.evaluate(X_test, y_test)
-        #scores.append(score[1])  # Pegando a métrica de precisão (índice 1)
         #Criar matriz de confusão para obter
+        # Verdadeiro Positivo (TP),
+        # Falso Positivo (FP),
+        # Verdadeiro Negativo (TN),
+        # Falso Negativo (FN),
         cm = confusion_matrix(y_test1, y_pred)
         tn, fp, fn, tp = cm.ravel()
 
@@ -64,7 +67,6 @@ def validação_cruzada(model, X, y, n_dobras):
         Especificidade = especificidade(tn, fp)
         f1_Score = f1__score(precision, recall)
 
-
         print('Acurácia:{:.4f}'.format(acc))
         print('Sensibilidade:{:.4f}'.format(recall))
         print('Especificidade:{:.4f}'.format(Especificidade))
@@ -73,7 +75,24 @@ def validação_cruzada(model, X, y, n_dobras):
 
         scores_accuracy.append(acc)
         media_accuracy = np.mean(scores_accuracy)
-        print('Média da acurácia: {}'.format(media_accuracy))
+        print('Média da acurácia: {:.4f}'.format(media_accuracy))
+
+        scores_sensitivity.append(recall)
+        mean_sensitivity = np.mean(scores_sensitivity)
+        print('Média da sensibilidade: {:.4f}'.format(mean_sensitivity))
+
+        scores_specificity.append(Especificidade)
+        mean_specificity = np.mean(scores_specificity)
+        print('Média da especificidade: {:.4f}'.format(mean_specificity))
+
+        scores_precision.append(precision)
+        mean_precision = np.mean(scores_precision)
+        print('Média da precisão: {:.4f}'.format(mean_precision))
+
+        scores_f1_score.append(f1_Score)
+        mean_f1_score = np.mean(scores_f1_score)
+        print('Média da f1_score: {:.4f}'.format(mean_f1_score))
+
 
 #Usar o pd.read_excel para ler o arquivo
 data = pd.read_excel('mammographic_masses.xlsx')
@@ -129,7 +148,4 @@ model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accura
 
 
 # Realizando validação cruzada com 5 dobras
-scores = validação_cruzada(model, X, encoded, n_dobras=5)
-
-# Imprimindo os resultados
-print("Precisão média:", scores)
+scores = validacao_cruzada(model, X, encoded, n_dobras=5)
