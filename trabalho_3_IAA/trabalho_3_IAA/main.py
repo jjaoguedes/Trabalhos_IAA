@@ -1,9 +1,8 @@
 import pandas as pd
-from keras.src.losses import mean_squared_error
 from sklearn.model_selection import train_test_split, KFold
 import os
-#os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import InputLayer, Dense
@@ -30,16 +29,11 @@ def f1__score(precisao, recall):
 def taxa_de_erro(precisao, recall):
     return 2*((precisao*recall)/(precisao+recall))
 
-def show_history_model(history, parametro, fold):
-    plt.plot(history)
-    plt.title('Model ' + parametro +' fold = ' + str(fold))
-    plt.ylabel(parametro)
-    plt.xlabel('Epoch')
-    plt.legend(['train'], loc='upper left')
-    plt.show()
 
 #Função para realizar validação cruzada
-def validacao_cruzada(model, X, y, n_dobras):
+def validacao_cruzada(model, X, y, n_dobras, n_model):
+
+    #listas para guardar valores das métricas
     scores_accuracy = []
     scores_sensitivity = []
     scores_specificity = []
@@ -48,22 +42,19 @@ def validacao_cruzada(model, X, y, n_dobras):
 
     list_mean_accuracy = []
     list_mean_loss = []
-    list_mean_val_accuracy = []
-    list_mean_val_loss = []
 
-    list_accuracy_np = []
-    list_loss_np = []
-    list_val_accuracy_np = []
-    list_val_loss_np = []
+    historico = []
     #Dividindo o dataset em dobras
     kf = KFold(n_splits=n_dobras, random_state=42, shuffle=True)
     fold = 0
     for train_idx, test_idx in kf.split(X):
+        #Divisão dos dados para a validação
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
-        list_loss_np = []
+
         #Treinando o modelo na dobra atual
-        hist = model.fit(X_train, y_train, epochs=500)
+        hist = model.fit(X_train, y_train, epochs=150,verbose=0)
+        historico.append(hist)
         fold = fold + 1
 
         #Predizendo as classes
@@ -87,12 +78,14 @@ def validacao_cruzada(model, X, y, n_dobras):
         Especificidade = especificidade(tn, fp)
         f1_Score = f1__score(precision, recall)
 
+        #Valores das métricas
         print('Acurácia:{:.4f}'.format(acc))
         print('Sensibilidade:{:.4f}'.format(recall))
         print('Especificidade:{:.4f}'.format(Especificidade))
         print('Precisão: {:.4f}'.format(precision))
         print('f1_Score: {:.4f}'.format(f1_Score))
 
+        #armazenamento dos valores em listas para média de cada métrica
         scores_accuracy.append(acc)
         mean_accuracy = np.mean(scores_accuracy)
         print('Média da acurácia: {:.4f}'.format(mean_accuracy))
@@ -114,19 +107,32 @@ def validacao_cruzada(model, X, y, n_dobras):
         print('Média da f1_score: {:.4f}'.format(mean_f1_score))
 
         accuracy = hist.history['accuracy']
-        show_history_model(accuracy, 'accuracy', fold)
         accuracy_np = np.array(accuracy)
         mean_accuracy_np = np.mean(accuracy_np)
         print('Média do modelo Accuracy: {:.4f}'.format(mean_accuracy_np))
         list_mean_accuracy.append(mean_accuracy_np)
 
         loss = hist.history['loss']
-        show_history_model(loss, 'loss', fold)
         loss_np = np.array(loss)
         mean_loss_np = np.mean(loss_np)
         print('Média do model Loss: {:.4f}'.format(mean_loss_np))
         list_mean_loss.append(mean_loss_np)
+        plt.figure()
 
+        #Mostrar curva de convergência da acúracia em função das épocas
+        for history in historico:
+            plt.plot(history.history['accuracy'])
+        plt.title(f'Curva de Convergência da Acurácia - Arquitetura {n_model}')
+        plt.xlabel('Épocas')
+        plt.ylabel('Acurácia')
+        plt.show()
+
+        for history in historico:
+            plt.plot(history.history['loss'])
+        plt.title(f'Curva de Convergência da Loss - Arquitetura {n_model}')
+        plt.xlabel('Épocas')
+        plt.ylabel('Loss')
+        plt.show()
 
 
 #Usar o pd.read_excel para ler o arquivo
@@ -156,26 +162,30 @@ np.unique(y)
 encoded = tf.keras.utils.to_categorical(y)
 #print(encoded)
 
-#utilizar o train_test_split do sklearn para dividir em treino e teste
-x_train, x_test, y_train, y_test = train_test_split(X, encoded, test_size=0.2, random_state=0)
-print(x_train.shape)
-print(x_test.shape)
-
 #Build the Model
 #Utilizar a classe Sequential()
 #Definir as camadas InputLayer e Dense
 #Mostrar a arquitetura
-model = Sequential([InputLayer(input_shape=(4,)),
-                    Dense(units=10, activation='relu'),
-                    Dense(units=10, activation='relu'),
+model1 = Sequential([InputLayer(input_shape=(4,)),
+                    Dense(units=15, activation='relu'),
+                    Dense(units=15, activation='relu'),
                     Dense(units=2, activation='softmax')])
 
-print(model.summary())
+print(model1.summary())
+
+model2 = Sequential([InputLayer(input_shape=(4,)),
+                    Dense(units=20, activation='relu'),
+                    Dense(units=20, activation='relu'),
+                    Dense(units=2, activation='softmax')])
+
+print(model2.summary())
 
 #Compilar o modelo
 #Config otimizador, função de perda e métricas
-model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
-
+model1.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=0.01), loss='categorical_crossentropy',
+                      metrics=['accuracy'])
+model2.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=0.01), loss='categorical_crossentropy',
+                      metrics=['accuracy'])
 #Train the Model
 #Chamar a função fit() para treinar
 #Passar como parâmetros x_train, y_train, tamanho do batch e quantidade de épocas
@@ -183,13 +193,9 @@ model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accura
 
 fold = 5
 # Realizando validação cruzada com 5 dobras
-validacao_cruzada(model, X, encoded, n_dobras= fold)
+validacao_cruzada(model1, X, encoded, n_dobras= fold, n_model=1)
 
-#Mostrar a convergência dos parâmetros em função das epocas
-#for epoch in range(len(list_loss)):
-#    show_history_model(list_loss[epoch], 'Loss', fold)
-#show_history_model(list_mean_loss, 'Loss')
-#show_history_model(list_mean_val_accuracy, 'Validation accuracy')
-#show_history_model(list_mean_val_loss, 'Validation loss')
+validacao_cruzada(model2, X, encoded, n_dobras= fold, n_model=2)
+
 
 
