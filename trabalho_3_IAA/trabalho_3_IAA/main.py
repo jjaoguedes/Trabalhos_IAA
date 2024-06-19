@@ -30,6 +30,14 @@ def f1__score(precisao, recall):
 def taxa_de_erro(precisao, recall):
     return 2*((precisao*recall)/(precisao+recall))
 
+def show_history_model(history, parametro, fold):
+    plt.plot(history)
+    plt.title('Model ' + parametro +' fold = ' + str(fold))
+    plt.ylabel(parametro)
+    plt.xlabel('Epoch')
+    plt.legend(['train'], loc='upper left')
+    plt.show()
+
 #Função para realizar validação cruzada
 def validacao_cruzada(model, X, y, n_dobras):
     scores_accuracy = []
@@ -37,14 +45,26 @@ def validacao_cruzada(model, X, y, n_dobras):
     scores_specificity = []
     scores_precision = []
     scores_f1_score = []
+
+    list_mean_accuracy = []
+    list_mean_loss = []
+    list_mean_val_accuracy = []
+    list_mean_val_loss = []
+
+    list_accuracy_np = []
+    list_loss_np = []
+    list_val_accuracy_np = []
+    list_val_loss_np = []
     #Dividindo o dataset em dobras
-    kf = KFold(n_splits=n_dobras, shuffle=True)
+    kf = KFold(n_splits=n_dobras, random_state=42, shuffle=True)
+    fold = 0
     for train_idx, test_idx in kf.split(X):
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
-
+        list_loss_np = []
         #Treinando o modelo na dobra atual
-        history.append(model.fit(X_train, y_train, epochs=10, validation_split=0.2))
+        hist = model.fit(X_train, y_train, epochs=500)
+        fold = fold + 1
 
         #Predizendo as classes
         predictions = model.predict(X_test)
@@ -74,8 +94,8 @@ def validacao_cruzada(model, X, y, n_dobras):
         print('f1_Score: {:.4f}'.format(f1_Score))
 
         scores_accuracy.append(acc)
-        media_accuracy = np.mean(scores_accuracy)
-        print('Média da acurácia: {:.4f}'.format(media_accuracy))
+        mean_accuracy = np.mean(scores_accuracy)
+        print('Média da acurácia: {:.4f}'.format(mean_accuracy))
 
         scores_sensitivity.append(recall)
         mean_sensitivity = np.mean(scores_sensitivity)
@@ -92,6 +112,21 @@ def validacao_cruzada(model, X, y, n_dobras):
         scores_f1_score.append(f1_Score)
         mean_f1_score = np.mean(scores_f1_score)
         print('Média da f1_score: {:.4f}'.format(mean_f1_score))
+
+        accuracy = hist.history['accuracy']
+        show_history_model(accuracy, 'accuracy', fold)
+        accuracy_np = np.array(accuracy)
+        mean_accuracy_np = np.mean(accuracy_np)
+        print('Média do modelo Accuracy: {:.4f}'.format(mean_accuracy_np))
+        list_mean_accuracy.append(mean_accuracy_np)
+
+        loss = hist.history['loss']
+        show_history_model(loss, 'loss', fold)
+        loss_np = np.array(loss)
+        mean_loss_np = np.mean(loss_np)
+        print('Média do model Loss: {:.4f}'.format(mean_loss_np))
+        list_mean_loss.append(mean_loss_np)
+
 
 
 #Usar o pd.read_excel para ler o arquivo
@@ -146,6 +181,15 @@ model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accura
 #Passar como parâmetros x_train, y_train, tamanho do batch e quantidade de épocas
 #history = model.fit(x_train, y_train, batch_size=32, epochs=20)
 
-
+fold = 5
 # Realizando validação cruzada com 5 dobras
-scores = validacao_cruzada(model, X, encoded, n_dobras=5)
+validacao_cruzada(model, X, encoded, n_dobras= fold)
+
+#Mostrar a convergência dos parâmetros em função das epocas
+#for epoch in range(len(list_loss)):
+#    show_history_model(list_loss[epoch], 'Loss', fold)
+#show_history_model(list_mean_loss, 'Loss')
+#show_history_model(list_mean_val_accuracy, 'Validation accuracy')
+#show_history_model(list_mean_val_loss, 'Validation loss')
+
+
