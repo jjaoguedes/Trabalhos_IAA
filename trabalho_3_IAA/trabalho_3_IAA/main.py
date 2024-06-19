@@ -39,6 +39,7 @@ def validacao_cruzada(model, X, y, n_dobras, n_model):
     scores_specificity = []
     scores_precision = []
     scores_f1_score = []
+    scores_taxa_de_erro = []
 
     list_mean_accuracy = []
     list_mean_loss = []
@@ -77,6 +78,7 @@ def validacao_cruzada(model, X, y, n_dobras, n_model):
         recall = sensibilidade(tp, fn)
         Especificidade = especificidade(tn, fp)
         f1_Score = f1__score(precision, recall)
+        taxa_de_erro = 1-acc
 
         #Valores das métricas
         print('Acurácia:{:.4f}'.format(acc))
@@ -84,6 +86,7 @@ def validacao_cruzada(model, X, y, n_dobras, n_model):
         print('Especificidade:{:.4f}'.format(Especificidade))
         print('Precisão: {:.4f}'.format(precision))
         print('f1_Score: {:.4f}'.format(f1_Score))
+        print('Taxa de erro: {:.4f}'.format(taxa_de_erro))
 
         #armazenamento dos valores em listas para média de cada métrica
         scores_accuracy.append(acc)
@@ -106,6 +109,10 @@ def validacao_cruzada(model, X, y, n_dobras, n_model):
         mean_f1_score = np.mean(scores_f1_score)
         print('Média da f1_score: {:.4f}'.format(mean_f1_score))
 
+        scores_taxa_de_erro.append(f1_Score)
+        mean_taxa_de_erro = np.mean(scores_taxa_de_erro)
+        print('Média da Taxa de erro: {:.4f}'.format(mean_taxa_de_erro))
+
         accuracy = hist.history['accuracy']
         accuracy_np = np.array(accuracy)
         mean_accuracy_np = np.mean(accuracy_np)
@@ -122,17 +129,20 @@ def validacao_cruzada(model, X, y, n_dobras, n_model):
         #Mostrar curva de convergência da acúracia em função das épocas
         for history in historico:
             plt.plot(history.history['accuracy'])
-        plt.title(f'Curva de Convergência da Acurácia - Arquitetura {n_model}')
+        plt.title(f'Curva de Convergência da Acurácia - Arquitetura {n_model} fold = ' + str(fold))
         plt.xlabel('Épocas')
         plt.ylabel('Acurácia')
+        plt.savefig('history_accuracy_fold' + str(fold) + '.png')
         plt.show()
 
         for history in historico:
             plt.plot(history.history['loss'])
-        plt.title(f'Curva de Convergência da Loss - Arquitetura {n_model}')
+        plt.title(f'Curva de Convergência da Loss - Arquitetura {n_model} fold = ' + str(fold))
         plt.xlabel('Épocas')
         plt.ylabel('Loss')
+        plt.savefig('history_loss_fold' + str(fold) + '.png')
         plt.show()
+
 
 
 #Usar o pd.read_excel para ler o arquivo
